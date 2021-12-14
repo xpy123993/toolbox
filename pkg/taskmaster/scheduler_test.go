@@ -1,4 +1,4 @@
-package task_test
+package taskmaster_test
 
 import (
 	"context"
@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/xpy123993/toolbox/pkg/task"
+	"github.com/xpy123993/toolbox/pkg/taskmaster"
 )
 
 func TestQuery(t *testing.T) {
-	taskMaster, err := task.NewTaskMaster(context.Background(), path.Join(t.TempDir(), "test.json"), time.Minute)
+	taskMaster, err := taskmaster.NewTaskMaster(context.Background(), path.Join(t.TempDir(), "test.json"), time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestQuery(t *testing.T) {
 
 func TestDumpSnapshot(t *testing.T) {
 	snapshotFile := path.Join(t.TempDir(), "test.json")
-	taskMaster, err := task.NewTaskMaster(context.Background(), snapshotFile, 2*time.Millisecond)
+	taskMaster, err := taskmaster.NewTaskMaster(context.Background(), snapshotFile, 2*time.Millisecond)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestDumpSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snapshot := task.Snapshot{}
+	snapshot := taskmaster.Snapshot{}
 	if err := json.Unmarshal(data, &snapshot); err != nil {
 		t.Fatal(err)
 	}
@@ -61,9 +61,9 @@ func TestDumpSnapshot(t *testing.T) {
 func TestRecoverFromSnapshot(t *testing.T) {
 	snapshotFile := path.Join(t.TempDir(), "test.json")
 	taskUUID := uuid.NewString()
-	snapshot := task.Snapshot{
+	snapshot := taskmaster.Snapshot{
 		CreatedAt: time.Now(),
-		AvailableTasks: map[string]task.Task{
+		AvailableTasks: map[string]taskmaster.Task{
 			taskUUID: {
 				ID:            taskUUID,
 				Data:          "test",
@@ -78,7 +78,7 @@ func TestRecoverFromSnapshot(t *testing.T) {
 	if err := os.WriteFile(snapshotFile, data, 0644); err != nil {
 		t.Fatal(err)
 	}
-	taskMaster, err := task.NewTaskMaster(context.Background(), snapshotFile, time.Minute)
+	taskMaster, err := taskmaster.NewTaskMaster(context.Background(), snapshotFile, time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func TestRecoverFromSnapshot(t *testing.T) {
 }
 
 func TestMarkAsComplete(t *testing.T) {
-	taskMaster, err := task.NewTaskMaster(context.Background(), path.Join(t.TempDir(), "test.json"), time.Minute)
+	taskMaster, err := taskmaster.NewTaskMaster(context.Background(), path.Join(t.TempDir(), "test.json"), time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}

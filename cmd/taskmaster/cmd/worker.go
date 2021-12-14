@@ -40,13 +40,14 @@ func workerRoutinue(
 	ctx, cancelFn := context.WithDeadline(context.Background(), resp.Deadline.AsTime().Add(-time.Second))
 	defer cancelFn()
 	cmd := exec.CommandContext(ctx, command.BaseCommand, command.Arguments...)
-	if data, err := cmd.CombinedOutput(); err != nil {
+	data, err := cmd.CombinedOutput()
+	if err != nil {
 		tracker.LazyPrintf(err.Error())
 		tracker.SetError()
 		return err
-	} else {
-		tracker.LazyPrintf("Result: %s", data)
 	}
+	tracker.LazyPrintf("Result: %s", data)
+
 	if _, err := taskmasterClient.Finish(context.Background(), &pb.FinishRequest{
 		Group: workerGroup,
 		ID:    resp.ID,

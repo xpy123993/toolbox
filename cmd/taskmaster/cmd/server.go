@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/xpy123993/toolbox/pkg/task"
+	"github.com/xpy123993/toolbox/pkg/taskmaster"
 	"github.com/xpy123993/yukino-net/libraries/util"
 	"google.golang.org/grpc"
 
@@ -23,7 +23,7 @@ func StartTaskMasterService(NetConfig *util.ClientConfig, Channel string, Snapsh
 		log.Fatal(err)
 	}
 
-	taskmaster, err := task.NewTaskMasterServer(SnapshotFolder, SnapshotInterval)
+	taskmaster, err := taskmaster.NewTaskMasterServer(SnapshotFolder, SnapshotInterval)
 	if err != nil {
 		log.Fatal(err)
 	}

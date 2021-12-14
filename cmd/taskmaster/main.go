@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/xpy123993/toolbox/cmd/taskmaster2/cmd"
+	"github.com/xpy123993/toolbox/cmd/taskmaster/cmd"
 )
 
 func main() {

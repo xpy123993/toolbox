@@ -1,4 +1,4 @@
-package task
+package taskmaster
 
 import (
 	"context"
@@ -12,11 +12,6 @@ import (
 
 	"github.com/google/uuid"
 )
-
-type Command struct {
-	BaseCommand string
-	Arguments   []string
-}
 
 // Task describes a task.
 type Task struct {
@@ -102,7 +97,7 @@ func (master *Scheduler) GetSnapshot() *Snapshot {
 	}
 }
 
-func (master *Scheduler) DumpTo(Filename string) error {
+func (master *Scheduler) dumpTo(Filename string) error {
 	data, err := json.MarshalIndent(*master.GetSnapshot(), "", "    ")
 	if err != nil {
 		log.Fatal(err)
@@ -138,7 +133,7 @@ func NewTaskMaster(Context context.Context, SnapshotFileName string, SnapshotInt
 				return
 			case <-ticker.C:
 				if taskmaster.needsDump() {
-					if err := taskmaster.DumpTo(SnapshotFileName); err != nil {
+					if err := taskmaster.dumpTo(SnapshotFileName); err != nil {
 						log.Fatal(err)
 					}
 				}

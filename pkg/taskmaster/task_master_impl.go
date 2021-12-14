@@ -1,4 +1,4 @@
-package task
+package taskmaster
 
 import (
 	"context"
@@ -18,7 +18,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-type TaskMasterServer struct {
+// ServerImpl is an implementation of task master RPC server.
+type ServerImpl struct {
 	pb.UnimplementedTaskMasterServer
 
 	mu             sync.RWMutex
@@ -28,11 +29,12 @@ type TaskMasterServer struct {
 	snapshotInterval time.Duration
 }
 
-func NewTaskMasterServer(SnapshotFolder string, SnapshotInterval time.Duration) (*TaskMasterServer, error) {
+// NewTaskMasterServer creates a ready to use task master server.
+func NewTaskMasterServer(SnapshotFolder string, SnapshotInterval time.Duration) (*ServerImpl, error) {
 	if err := os.MkdirAll(SnapshotFolder, fs.ModePerm); err != nil {
 		return nil, err
 	}
-	taskMaster := TaskMasterServer{
+	taskMaster := ServerImpl{
 		mu:               sync.RWMutex{},
 		schedulerGroup:   make(map[string]*Scheduler),
 		snapshotFolder:   SnapshotFolder,
@@ -52,7 +54,8 @@ func NewTaskMasterServer(SnapshotFolder string, SnapshotInterval time.Duration) 
 	return &taskMaster, nil
 }
 
-func (server *TaskMasterServer) Query(ctx context.Context, request *pb.QueryRequest) (*pb.QueryResponse, error) {
+// Query implements the RPC method `TaskMaster.Query`.
+func (server *ServerImpl) Query(ctx context.Context, request *pb.QueryRequest) (*pb.QueryResponse, error) {
 	server.mu.RLock()
 	defer server.mu.RUnlock()
 
@@ -70,7 +73,8 @@ func (server *TaskMasterServer) Query(ctx context.Context, request *pb.QueryRequ
 	return nil, status.Errorf(codes.NotFound, "group not found")
 }
 
-func (server *TaskMasterServer) Finish(ctx context.Context, request *pb.FinishRequest) (*pb.FinishResponse, error) {
+// Finish implements the RPC method `TaskMaster.Finish`.
+func (server *ServerImpl) Finish(ctx context.Context, request *pb.FinishRequest) (*pb.FinishResponse, error) {
 	server.mu.RLock()
 	defer server.mu.RUnlock()
 
@@ -84,7 +88,8 @@ func (server *TaskMasterServer) Finish(ctx context.Context, request *pb.FinishRe
 	return nil, status.Errorf(codes.NotFound, "group not found")
 }
 
-func (server *TaskMasterServer) Insert(ctx context.Context, request *pb.InsertRequest) (*pb.InsertResponse, error) {
+// Insert implements the RPC method `TaskMaster.Insert`.
+func (server *ServerImpl) Insert(ctx context.Context, request *pb.InsertRequest) (*pb.InsertResponse, error) {
 	server.mu.Lock()
 	scheduler, exists := server.schedulerGroup[request.GetGroup()]
 	if !exists {
@@ -102,7 +107,8 @@ func (server *TaskMasterServer) Insert(ctx context.Context, request *pb.InsertRe
 	}, nil
 }
 
-func (server *TaskMasterServer) RenderStatusPage(ctx context.Context, writer io.Writer) {
+// RenderStatusPage renders a basic HTML page to show the contents inside the server.
+func (server *ServerImpl) RenderStatusPage(ctx context.Context, writer io.Writer) {
 	server.mu.RLock()
 	defer server.mu.RUnlock()
 	fmt.Fprintf(writer, "<h2> Total group count: %d </h2>\n", len(server.schedulerGroup))
@@ -110,6 +116,7 @@ func (server *TaskMasterServer) RenderStatusPage(ctx context.Context, writer io.
 		snapshot := scheduler.GetSnapshot()
 		fmt.Fprintf(writer, "<div>\n")
 		fmt.Fprintf(writer, "<h3> Group `%s` </h3>\n", groupName)
+		fmt.Fprintf(writer, "<h4> Task Number: %d </h4>\n", len(snapshot.AvailableTasks))
 		for ID, task := range snapshot.AvailableTasks {
 			label := "Pending"
 			if task.AvailableTime.After(time.Now()) {

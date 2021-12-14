@@ -45,6 +45,7 @@ func loadNetConfig(cmd *cobra.Command, args []string) error {
 	return err
 }
 
+// Execute executes commands from os.Args.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatalf("failed to execute Root command: %v", err)
