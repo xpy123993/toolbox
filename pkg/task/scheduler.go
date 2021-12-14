@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"sync"
@@ -11,6 +12,11 @@ import (
 
 	"github.com/google/uuid"
 )
+
+type Command struct {
+	BaseCommand string
+	Arguments   []string
+}
 
 // Task describes a task.
 type Task struct {
@@ -96,6 +102,17 @@ func (master *Scheduler) GetSnapshot() *Snapshot {
 	}
 }
 
+func (master *Scheduler) DumpTo(Filename string) error {
+	data, err := json.MarshalIndent(*master.GetSnapshot(), "", "    ")
+	if err != nil {
+		log.Fatal(err)
+	}
+	master.mu.Lock()
+	master.unsaved = false
+	master.mu.Unlock()
+	return os.WriteFile(Filename, data, fs.ModePerm)
+}
+
 // NewTaskMaster creates a task master which dumps its state to `SnapshotFileName` every `SnapshotInterval`.
 func NewTaskMaster(Context context.Context, SnapshotFileName string, SnapshotInterval time.Duration) (*Scheduler, error) {
 	taskmaster := Scheduler{
@@ -121,11 +138,7 @@ func NewTaskMaster(Context context.Context, SnapshotFileName string, SnapshotInt
 				return
 			case <-ticker.C:
 				if taskmaster.needsDump() {
-					data, err := json.MarshalIndent(*taskmaster.GetSnapshot(), "", "    ")
-					if err != nil {
-						log.Fatal(err)
-					}
-					if err := os.WriteFile(SnapshotFileName, data, 0644); err != nil {
+					if err := taskmaster.DumpTo(SnapshotFileName); err != nil {
 						log.Fatal(err)
 					}
 				}

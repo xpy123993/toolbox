@@ -1,0 +1,51 @@
+syntax = "proto3";
+package proto;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/xpy123993/toolbox/proto";
+
+service TaskMaster {
+    // Query marks a task as "owned" and returns the task content.
+    // Returns error if no available tasks.
+    rpc Query (QueryRequest) returns (QueryResponse) {}
+    // Finish marks a task as "done".
+    // This will prevent the task master from scheduling again after expired.
+    rpc Finish (FinishRequest) returns (FinishResponse) {}
+
+    // Insert inserts a new task into the task master.
+    rpc Insert (InsertRequest) returns (InsertResponse) {}
+}
+
+message Command {
+    string base_command = 1;
+    repeated string arguments = 2;
+}
+
+message QueryRequest {
+    string group = 1;
+    google.protobuf.Duration loan_duration = 2;
+}
+
+message QueryResponse {
+    string ID = 1;
+    string data = 2;
+    google.protobuf.Timestamp deadline = 3;
+}
+
+message FinishRequest {
+    string group = 1;
+    string ID = 2;
+}
+
+message FinishResponse {}
+
+message InsertRequest {
+    string group = 1;
+    string data = 2;
+}
+
+message InsertResponse {
+    string ID = 1;
+}
