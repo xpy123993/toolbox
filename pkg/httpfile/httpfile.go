@@ -1,4 +1,4 @@
-// Simple HTTP file server. Supports uploading.
+// Package httpfile includes a simple HTTP file server. Supports uploading.
 package httpfile
 
 import (
@@ -12,7 +12,7 @@ import (
 	"path"
 	"time"
 
-	_ "embed"
+	_ "embed" // just for embedding
 )
 
 //go:embed assets/upload.html
@@ -34,7 +34,7 @@ func noCacheHandler(h http.Handler, etagHeaders []string, noCacheHeaders map[str
 	return http.HandlerFunc(fn)
 }
 
-// StartHTTPFileService creates a HTTP file service on `listener` for `directory`.
+// CreateHTTPServiceMux creates a HTTP mux for `directory`.
 //
 // `/download` to list files under `directory`.
 // `/upload` is the file upload portal.
@@ -143,12 +143,12 @@ func UploadFile(URL string, LocalFileName string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	resp_body, err := ioutil.ReadAll(resp.Body)
+	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("returns error status code: %v in %v", resp.StatusCode, string(resp_body))
+		return fmt.Errorf("returns error status code: %v in %v", resp.StatusCode, string(respBody))
 	}
 	return nil
 }
