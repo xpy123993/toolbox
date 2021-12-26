@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path"
@@ -32,7 +33,7 @@ func TestUpload(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	if err := httpfile.UploadFile(fmt.Sprintf("%s/upload", serverAddress), path.Join(anotherFolder, "test.bin")); err != nil {
+	if err := httpfile.UploadFile(fmt.Sprintf("%s/upload", serverAddress), path.Join(anotherFolder, "test.bin"), http.DefaultClient); err != nil {
 		t.Fatal(err)
 	}
 	if rdata, err := os.ReadFile(path.Join(serveDir, "test.bin")); err != nil {
@@ -54,7 +55,7 @@ func TestDownload(t *testing.T) {
 	}
 
 	anotherFolder := os.TempDir()
-	if err := httpfile.DownloadFileFromURL(fmt.Sprintf("%s/download/test.bin", serverAddress), path.Join(anotherFolder, "test.bin")); err != nil {
+	if err := httpfile.DownloadFileFromURL(fmt.Sprintf("%s/download/test.bin", serverAddress), path.Join(anotherFolder, "test.bin"), http.DefaultClient); err != nil {
 		t.Fatal(err)
 	}
 	if rdata, err := os.ReadFile(path.Join(anotherFolder, "test.bin")); err != nil {

@@ -84,15 +84,14 @@ func CreateHTTPServiceMux(directory string) *http.ServeMux {
 }
 
 // DownloadFileFromURL downloads from `URL` and saves to `LocalFileName`.
-func DownloadFileFromURL(URL string, LocalFileName string) error {
+func DownloadFileFromURL(URL string, LocalFileName string, Client *http.Client) error {
 	out, err := os.Create(LocalFileName)
 	if err != nil {
 		return err
 	}
 	defer out.Close()
 
-	// Get the data
-	resp, err := http.Get(URL)
+	resp, err := Client.Get(URL)
 	if err != nil {
 		return err
 	}
@@ -112,7 +111,7 @@ func DownloadFileFromURL(URL string, LocalFileName string) error {
 }
 
 // UploadFile uploads `LocalFileName` to `URL`.
-func UploadFile(URL string, LocalFileName string) error {
+func UploadFile(URL string, LocalFileName string, Client *http.Client) error {
 	bodyBuf := &bytes.Buffer{}
 	bodyWriter := multipart.NewWriter(bodyBuf)
 
@@ -138,7 +137,7 @@ func UploadFile(URL string, LocalFileName string) error {
 	contentType := bodyWriter.FormDataContentType()
 	bodyWriter.Close()
 
-	resp, err := http.Post(URL, contentType, bodyBuf)
+	resp, err := Client.Post(URL, contentType, bodyBuf)
 	if err != nil {
 		return err
 	}
