@@ -4,21 +4,21 @@ import (
 	"context"
 	"flag"
 	"log"
+	"net"
 	"net/http"
 	"time"
 
 	"github.com/xpy123993/toolbox/pkg/taskmaster"
-	"github.com/xpy123993/yukino-net/libraries/util"
 	"google.golang.org/grpc"
 
 	pb "github.com/xpy123993/toolbox/proto"
 )
 
 // StartTaskMasterService creates a task master service on `Channel`.
-func StartTaskMasterService(NetConfig *util.ClientConfig, Channel string, SnapshotFolder string, SnapshotInterval time.Duration) {
+func StartTaskMasterService(Address string, SnapshotFolder string, SnapshotInterval time.Duration) {
 	flag.Parse()
 
-	listener, err := util.CreateListenerFromNetConfig(NetConfig, Channel)
+	listener, err := net.Listen("tcp", Address)
 	if err != nil {
 		log.Fatal(err)
 	}

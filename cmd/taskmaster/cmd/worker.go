@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 	"os/exec"
 	"time"
 
-	"github.com/xpy123993/yukino-net/libraries/util"
 	"golang.org/x/net/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
@@ -18,8 +16,7 @@ import (
 )
 
 func workerRoutinue(
-	workerGroup string, timeout time.Duration,
-	taskmasterClient pb.TaskMasterClient) error {
+	workerGroup string, timeout time.Duration, taskmasterClient pb.TaskMasterClient) error {
 	resp, err := taskmasterClient.Query(context.Background(), &pb.QueryRequest{
 		Group:        workerGroup,
 		LoanDuration: durationpb.New(timeout),
@@ -59,22 +56,16 @@ func workerRoutinue(
 	return nil
 }
 
-func createTaskMasterClient(NetConfig *util.ClientConfig, TaskMasterChannel string) (pb.TaskMasterClient, error) {
-	dialer, err := util.CreateClientFromNetConfig(NetConfig)
-	if err != nil {
-		return nil, err
-	}
-	client, err := grpc.Dial(TaskMasterChannel, grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
-		return dialer.Dial(s)
-	}), grpc.WithInsecure())
+func createTaskMasterClient(Address string) (pb.TaskMasterClient, error) {
+	client, err := grpc.Dial(Address, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
 	return pb.NewTaskMasterClient(client), nil
 }
 
-func worker(NetConfig *util.ClientConfig, TaskMasterChannel string, WorkerGroup string, WorkerTimeout time.Duration) error {
-	client, err := createTaskMasterClient(NetConfig, TaskMasterChannel)
+func worker(Address string, WorkerGroup string, WorkerTimeout time.Duration) error {
+	client, err := createTaskMasterClient(Address)
 	if err != nil {
 		return err
 	}
@@ -87,6 +78,6 @@ func worker(NetConfig *util.ClientConfig, TaskMasterChannel string, WorkerGroup 
 }
 
 // StartWorker creates a worker job to periodically fetch task from `WorkGroup` of task master.
-func StartWorker(NetConfig *util.ClientConfig, TaskMasterChannel string, WorkerGroup string, WorkerTimeout time.Duration) {
-	log.Print(worker(NetConfig, TaskMasterChannel, WorkerGroup, WorkerTimeout))
+func StartWorker(Address string, WorkerGroup string, WorkerTimeout time.Duration) {
+	log.Print(worker(Address, WorkerGroup, WorkerTimeout))
 }

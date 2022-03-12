@@ -1,107 +1,45 @@
 package cmd
 
 import (
+	"context"
+	"flag"
 	"fmt"
-	"log"
-	"net"
-	"net/http"
 	"time"
-
-	"github.com/spf13/cobra"
-	"github.com/xpy123993/yukino-net/libraries/util"
-	"golang.org/x/net/trace"
 )
 
-var (
-	exporterAddress string
-	netConfig       *util.ClientConfig
-	configFile      = []string{}
-
-	rootCmd = &cobra.Command{
-		Use:   "taskmaster",
-		Short: "taskmaster is a tool to distribute tasks to workers.",
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			if len(exporterAddress) > 0 {
-				go func() {
-					lis, err := net.Listen("tcp", exporterAddress)
-					if err != nil {
-						log.Printf("failed to start status exporter: %v", err)
-						return
-					}
-					log.Printf("Exporting metrics on http://%s/debug/requests", lis.Addr().String())
-					http.Serve(lis, nil)
-				}()
-			}
-		},
+func HandleServe(args ...string) error {
+	flagSet := flag.NewFlagSet("serve", flag.ExitOnError)
+	snapshotInterval := flagSet.Duration("snapshot-interval", 30*time.Second, "Save interval of snapshots.")
+	flagSet.Parse(args)
+	if len(flagSet.Args()) != 2 {
+		fmt.Println("Usage: serve [serving channel] [snapshot folder]")
+		fmt.Println("Example: serve --snapshot-interval=30s /example/taskmaster ./snapshots")
+		return fmt.Errorf("invalid arguments")
 	}
-)
-
-func loadNetConfig(cmd *cobra.Command, args []string) error {
-	var err error
-	netConfig, err = util.LoadNetConfig(configFile)
-	if err != nil {
-		fmt.Printf("Cannot load yukino net configuration file: %v\n", err)
-	}
-	return err
+	StartTaskMasterService(flagSet.Arg(0), flagSet.Arg(1), *snapshotInterval)
+	return nil
 }
 
-// Execute executes commands from os.Args.
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		log.Fatalf("failed to execute Root command: %v", err)
+func HandleWorker(args ...string) error {
+	flagSet := flag.NewFlagSet("work", flag.ExitOnError)
+	taskGroup := flagSet.String("task-group", "default", "Group this worker is assigned to.")
+	taskTimeout := flagSet.Duration("task-timeout", time.Hour, "The timeout of executing each task.")
+	flagSet.Parse(args)
+	if len(flagSet.Args()) != 1 {
+		fmt.Println("Usage: work [task master channel]")
+		fmt.Println("Example: work /example/taskmaster --task-group=default --task-timeout=1h")
+		return fmt.Errorf("invalid arguments")
 	}
+	StartWorker(flagSet.Arg(0), *taskGroup, *taskTimeout)
+	return nil
 }
 
-func init() {
-	rootCmd.PersistentFlags().StringArrayVarP(&configFile, "config", "c", []string{"./config.json", "/etc/yukino-net/config.json", "$HOME/.yukino-net"}, "Configuration file to join the router network.")
-	rootCmd.PersistentFlags().StringVarP(&exporterAddress, "exporter-address", "e", "", "The webserver to export realtime metrics.")
-
-	trace.AuthRequest = func(req *http.Request) (any, sensitive bool) {
-		return true, false
+func HandleInsert(args ...string) error {
+	if len(args) < 3 {
+		fmt.Println("Usage: insert [task master channel] [task group] [base command] [args ...]")
+		fmt.Println("Example: insert /example/taskmaster echo hello world")
+		return fmt.Errorf("invalid arguments")
 	}
-
-	snapshotInterval := time.Minute
-
-	var serveCmd = &cobra.Command{
-		Use:     "serve [serving channel] [snapshot folder]",
-		Short:   "Starts a task master service.",
-		Example: "serve /example/taskmaster ./snapshots --snapshot-interval=30s",
-		PreRunE: loadNetConfig,
-		Args:    cobra.ExactArgs(2),
-		Run: func(cmd *cobra.Command, args []string) {
-			StartTaskMasterService(netConfig, args[0], args[1], snapshotInterval)
-		},
-	}
-	serveCmd.Flags().DurationVarP(&snapshotInterval, "snapshot-interval", "t", time.Minute, "The save interval of snapshots.")
-
-	taskGroup := "default"
-	taskTimeout := time.Hour
-
-	var workCmd = &cobra.Command{
-		Use:     "work [task master channel]",
-		Short:   "Starts a worker job to fetch tasks from task master channel.",
-		Example: "work /example/taskmaster --task-group=default --task-timeout=1h",
-		PreRunE: loadNetConfig,
-		Args:    cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			StartWorker(netConfig, args[0], taskGroup, taskTimeout)
-		},
-	}
-	workCmd.Flags().StringVarP(&taskGroup, "task-group", "g", "default", "The group of the task to be fetched.")
-	workCmd.Flags().DurationVarP(&taskTimeout, "task-timeout", "t", time.Hour, "The timeout of executing each task.")
-
-	var insertCmd = &cobra.Command{
-		Use:     "insert [task master channel] [task group] [base command] [args ...]",
-		Short:   "Insert a task into task master channel",
-		Example: "insert /example/taskmaster echo hello world",
-		PreRunE: loadNetConfig,
-		Args:    cobra.MinimumNArgs(3),
-		Run: func(cmd *cobra.Command, args []string) {
-			InsertTask(cmd.Context(), netConfig, args[0], args[1], args[2], args[3:])
-		},
-	}
-
-	rootCmd.AddCommand(serveCmd)
-	rootCmd.AddCommand(workCmd)
-	rootCmd.AddCommand(insertCmd)
+	InsertTask(context.Background(), args[0], args[1], args[2], args[3:])
+	return nil
 }

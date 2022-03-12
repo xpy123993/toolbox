@@ -4,15 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/xpy123993/yukino-net/libraries/util"
 	"google.golang.org/protobuf/proto"
 
 	pb "github.com/xpy123993/toolbox/proto"
 )
 
 // InsertTask inserts a task into `WorkerGroup` of the task master.
-func InsertTask(Context context.Context, NetConfig *util.ClientConfig, TaskMasterChannel string, WorkerGroup string, BaseCommand string, Arguments []string) error {
-	client, err := createTaskMasterClient(NetConfig, TaskMasterChannel)
+func InsertTask(Context context.Context, Address string, WorkerGroup string, BaseCommand string, Arguments []string) error {
+	client, err := createTaskMasterClient(Address)
 	if err != nil {
 		return err
 	}
