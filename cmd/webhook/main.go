@@ -29,8 +29,8 @@ func handleServerMode(args ...string) {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(r.Header.Get("X-CHANNEL-TOKEN"))); err != nil {
-			http.Error(w, fmt.Sprintf("error: %v", err), http.StatusUnauthorized)
+		if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(r.Header.Get("X-WEBHOOK-TOKEN"))); err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 		if err := r.ParseForm(); err != nil {
