@@ -16,4 +16,7 @@ require (
 	google.golang.org/protobuf v1.27.1
 )
 
-require golang.org/x/crypto v0.0.0-20220312131142-6068a2e6cfdc
+require (
+	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
+	golang.org/x/crypto v0.0.0-20220312131142-6068a2e6cfdc
+)
