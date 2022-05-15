@@ -1,0 +1,19 @@
+syntax = "proto3";
+package proto;
+
+option go_package = "github.com/xpy123993/toolbox/proto";
+
+service Endpoint {
+    // A service to proxy TCP/UDP requests.
+    rpc Proxy(stream DataTrunk) returns (stream DataTrunk) {}
+}
+
+message ProxyMetadata {
+    string method = 1;
+    string address = 2;
+}
+
+message DataTrunk {
+    bytes data = 1;
+    optional ProxyMetadata metadata = 2;
+}
