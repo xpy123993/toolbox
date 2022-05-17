@@ -38,6 +38,7 @@ func handleServerMode(args ...string) {
 			return
 		}
 		cmd := exec.CommandContext(r.Context(), *baseCommand, serverFlags.Args()...)
+		cmd.Env = os.Environ()
 		for k, v := range r.Form {
 			if len(v) == 0 {
 				continue
