@@ -15,7 +15,7 @@ import (
 )
 
 // StartTaskMasterService creates a task master service on `Channel`.
-func StartTaskMasterService(Address string, SnapshotFolder string, SnapshotInterval time.Duration) {
+func StartTaskMasterService(Address string, SnapshotFolder string, SnapshotInterval time.Duration, httpAddr string) {
 	flag.Parse()
 
 	listener, err := net.Listen("tcp", Address)
@@ -27,11 +27,15 @@ func StartTaskMasterService(Address string, SnapshotFolder string, SnapshotInter
 	if err != nil {
 		log.Fatal(err)
 	}
-	http.HandleFunc("/tasks", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Add("Content-Type", "text/html")
-		taskmaster.RenderStatusPage(context.Background(), rw)
-	})
+	if len(httpAddr) > 0 {
+		http.HandleFunc("/tasks", func(rw http.ResponseWriter, r *http.Request) {
+			rw.Header().Add("Content-Type", "text/html")
+			taskmaster.RenderStatusPage(context.Background(), rw)
+		})
+		go http.ListenAndServe(httpAddr, nil)
+	}
 	server := grpc.NewServer()
 	server.RegisterService(&pb.TaskMaster_ServiceDesc, taskmaster)
+	log.Printf("Serving on %v", listener.Addr())
 	server.Serve(listener)
 }

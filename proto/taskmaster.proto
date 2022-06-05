@@ -13,7 +13,8 @@ service TaskMaster {
     // Finish marks a task as "done".
     // This will prevent the task master from scheduling again after expired.
     rpc Finish (FinishRequest) returns (FinishResponse) {}
-
+    // Extend extends an ongoing task's loan.
+    rpc Extend (TaskExtendRequest) returns (TaskExtendResponse) {}
     // Insert inserts a new task into the task master.
     rpc Insert (InsertRequest) returns (InsertResponse) {}
 }
@@ -32,6 +33,16 @@ message QueryResponse {
     string ID = 1;
     string data = 2;
     google.protobuf.Timestamp deadline = 3;
+}
+
+message TaskExtendRequest {
+    string group = 1;
+    string ID = 2;
+    google.protobuf.Duration loan_duration = 3;
+}
+
+message TaskExtendResponse {
+    google.protobuf.Timestamp deadline = 1;
 }
 
 message FinishRequest {

@@ -53,6 +53,18 @@ func (master *Scheduler) Query(timeout time.Duration) *Task {
 	return nil
 }
 
+func (master *Scheduler) ExtendLoan(ID string, deadline time.Time) error {
+	master.mu.Lock()
+	defer master.mu.Unlock()
+	task, ok := master.ownedTasks[ID]
+	if !ok {
+		return fmt.Errorf("Task `%s` is not found", ID)
+	}
+	task.AvailableTime = deadline
+	master.unsaved = true
+	return nil
+}
+
 func (master *Scheduler) needsDump() bool {
 	master.mu.RLock()
 	defer master.mu.RUnlock()

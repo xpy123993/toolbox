@@ -15,18 +15,26 @@ import (
 	pb "github.com/xpy123993/toolbox/proto"
 )
 
+const RPCTimeout = 5 * time.Minute
+
 func workerRoutinue(
-	workerGroup string, timeout time.Duration, taskmasterClient pb.TaskMasterClient) error {
-	resp, err := taskmasterClient.Query(context.Background(), &pb.QueryRequest{
+	backgroundContext context.Context, workerGroup string, timeout time.Duration, taskmasterClient pb.TaskMasterClient) error {
+
+	routineContext, cancelFn := context.WithTimeout(backgroundContext, timeout)
+	defer cancelFn()
+
+	resp, err := taskmasterClient.Query(routineContext, &pb.QueryRequest{
 		Group:        workerGroup,
-		LoanDuration: durationpb.New(timeout),
+		LoanDuration: durationpb.New(RPCTimeout),
 	})
 	if err != nil {
 		return err
 	}
-	tracker := trace.New("Worker", fmt.Sprintf("working on task `%s`", resp.GetID()))
+	taskID := resp.GetID()
+
+	tracker := trace.New("Worker", fmt.Sprintf("working on task `%s`", taskID))
 	defer tracker.Finish()
-	log.Printf("working on task `%s`", resp.GetID())
+	log.Printf("working on task `%s`", taskID)
 
 	command := pb.Command{}
 	if err := proto.Unmarshal([]byte(resp.GetData()), &command); err != nil {
@@ -34,9 +42,29 @@ func workerRoutinue(
 	}
 	tracker.LazyPrintf("%s", command.String())
 
-	ctx, cancelFn := context.WithDeadline(context.Background(), resp.Deadline.AsTime().Add(-time.Second))
-	defer cancelFn()
-	cmd := exec.CommandContext(ctx, command.BaseCommand, command.Arguments...)
+	go func() {
+		ticker := time.NewTicker(RPCTimeout)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-routineContext.Done():
+				return
+			case <-ticker.C:
+				if _, err := taskmasterClient.Extend(routineContext, &pb.TaskExtendRequest{
+					Group:        workerGroup,
+					ID:           taskID,
+					LoanDuration: durationpb.New(2 * RPCTimeout),
+				}); err != nil {
+					log.Print(err)
+					cancelFn()
+					return
+				}
+				tracker.LazyPrintf("RPC deadline refreshed")
+			}
+		}
+	}()
+
+	cmd := exec.CommandContext(routineContext, command.BaseCommand, command.Arguments...)
 	data, err := cmd.CombinedOutput()
 	if err != nil {
 		tracker.LazyPrintf(err.Error())
@@ -45,14 +73,14 @@ func workerRoutinue(
 	}
 	tracker.LazyPrintf("Result: %s", data)
 
-	if _, err := taskmasterClient.Finish(context.Background(), &pb.FinishRequest{
+	if _, err := taskmasterClient.Finish(routineContext, &pb.FinishRequest{
 		Group: workerGroup,
-		ID:    resp.ID,
+		ID:    taskID,
 	}); err != nil {
 		return err
 	}
 	tracker.LazyPrintf("commited")
-	log.Printf("task `%s` is commited", resp.ID)
+	log.Printf("task `%s` is commited", taskID)
 	return nil
 }
 
@@ -70,7 +98,7 @@ func worker(Address string, WorkerGroup string, WorkerTimeout time.Duration) err
 		return err
 	}
 	for {
-		if err := workerRoutinue(WorkerGroup, WorkerTimeout, client); err != nil {
+		if err := workerRoutinue(context.Background(), WorkerGroup, WorkerTimeout, client); err != nil {
 			log.Printf("worker returns error status: %v", err)
 			<-time.After(30 * time.Second)
 		}

@@ -88,6 +88,23 @@ func (server *ServerImpl) Finish(ctx context.Context, request *pb.FinishRequest)
 	return nil, status.Errorf(codes.NotFound, "group not found")
 }
 
+func (server *ServerImpl) Extend(ctx context.Context, request *pb.TaskExtendRequest) (*pb.TaskExtendResponse, error) {
+	server.mu.RLock()
+	defer server.mu.RUnlock()
+
+	if scheduler, exists := server.schedulerGroup[request.GetGroup()]; exists && scheduler != nil {
+		newDeadline := time.Now().Add(request.LoanDuration.AsDuration())
+		err := scheduler.ExtendLoan(request.GetID(), newDeadline)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		}
+		return &pb.TaskExtendResponse{
+			Deadline: timestamppb.New(newDeadline),
+		}, nil
+	}
+	return nil, status.Errorf(codes.NotFound, "group not found")
+}
+
 // Insert implements the RPC method `TaskMaster.Insert`.
 func (server *ServerImpl) Insert(ctx context.Context, request *pb.InsertRequest) (*pb.InsertResponse, error) {
 	server.mu.Lock()

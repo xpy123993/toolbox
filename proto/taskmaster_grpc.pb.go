@@ -24,6 +24,8 @@ type TaskMasterClient interface {
 	// Finish marks a task as "done".
 	// This will prevent the task master from scheduling again after expired.
 	Finish(ctx context.Context, in *FinishRequest, opts ...grpc.CallOption) (*FinishResponse, error)
+	// Extend extends an ongoing task's loan.
+	Extend(ctx context.Context, in *TaskExtendRequest, opts ...grpc.CallOption) (*TaskExtendResponse, error)
 	// Insert inserts a new task into the task master.
 	Insert(ctx context.Context, in *InsertRequest, opts ...grpc.CallOption) (*InsertResponse, error)
 }
@@ -54,6 +56,15 @@ func (c *taskMasterClient) Finish(ctx context.Context, in *FinishRequest, opts .
 	return out, nil
 }
 
+func (c *taskMasterClient) Extend(ctx context.Context, in *TaskExtendRequest, opts ...grpc.CallOption) (*TaskExtendResponse, error) {
+	out := new(TaskExtendResponse)
+	err := c.cc.Invoke(ctx, "/proto.TaskMaster/Extend", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *taskMasterClient) Insert(ctx context.Context, in *InsertRequest, opts ...grpc.CallOption) (*InsertResponse, error) {
 	out := new(InsertResponse)
 	err := c.cc.Invoke(ctx, "/proto.TaskMaster/Insert", in, out, opts...)
@@ -73,6 +84,8 @@ type TaskMasterServer interface {
 	// Finish marks a task as "done".
 	// This will prevent the task master from scheduling again after expired.
 	Finish(context.Context, *FinishRequest) (*FinishResponse, error)
+	// Extend extends an ongoing task's loan.
+	Extend(context.Context, *TaskExtendRequest) (*TaskExtendResponse, error)
 	// Insert inserts a new task into the task master.
 	Insert(context.Context, *InsertRequest) (*InsertResponse, error)
 	mustEmbedUnimplementedTaskMasterServer()
@@ -87,6 +100,9 @@ func (UnimplementedTaskMasterServer) Query(context.Context, *QueryRequest) (*Que
 }
 func (UnimplementedTaskMasterServer) Finish(context.Context, *FinishRequest) (*FinishResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Finish not implemented")
+}
+func (UnimplementedTaskMasterServer) Extend(context.Context, *TaskExtendRequest) (*TaskExtendResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Extend not implemented")
 }
 func (UnimplementedTaskMasterServer) Insert(context.Context, *InsertRequest) (*InsertResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Insert not implemented")
@@ -140,6 +156,24 @@ func _TaskMaster_Finish_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TaskMaster_Extend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TaskExtendRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TaskMasterServer).Extend(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.TaskMaster/Extend",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TaskMasterServer).Extend(ctx, req.(*TaskExtendRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TaskMaster_Insert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(InsertRequest)
 	if err := dec(in); err != nil {
@@ -172,6 +206,10 @@ var TaskMaster_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Finish",
 			Handler:    _TaskMaster_Finish_Handler,
+		},
+		{
+			MethodName: "Extend",
+			Handler:    _TaskMaster_Extend_Handler,
 		},
 		{
 			MethodName: "Insert",

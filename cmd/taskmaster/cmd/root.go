@@ -10,13 +10,14 @@ import (
 func HandleServe(args ...string) error {
 	flagSet := flag.NewFlagSet("serve", flag.ExitOnError)
 	snapshotInterval := flagSet.Duration("snapshot-interval", 30*time.Second, "Save interval of snapshots.")
+	httpAddr := flagSet.String("http-address", "", "If not empty, a task status page will be hold.")
 	flagSet.Parse(args)
 	if len(flagSet.Args()) != 2 {
 		fmt.Println("Usage: serve [serving channel] [snapshot folder]")
 		fmt.Println("Example: serve --snapshot-interval=30s /example/taskmaster ./snapshots")
 		return fmt.Errorf("invalid arguments")
 	}
-	StartTaskMasterService(flagSet.Arg(0), flagSet.Arg(1), *snapshotInterval)
+	StartTaskMasterService(flagSet.Arg(0), flagSet.Arg(1), *snapshotInterval, *httpAddr)
 	return nil
 }
 
