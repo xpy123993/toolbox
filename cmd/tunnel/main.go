@@ -158,13 +158,13 @@ func main() {
 
 	switch flag.Arg(0) {
 	case "server":
-		if len(os.Args) != 2 {
+		if len(flag.Args()) != 2 {
 			fmt.Printf("Usage:\n tunnel server [listen address]\n")
 			os.Exit(1)
 		}
 		err = handleProxyServer(flag.Arg(1), cert, ca)
 	case "client":
-		if len(os.Args) != 3 {
+		if len(flag.Args()) != 3 {
 			fmt.Printf("Usage:\n tunnel client [listen address] [remote address]\n")
 			os.Exit(1)
 		}
