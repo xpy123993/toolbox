@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/gob"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +13,12 @@ import (
 	"os"
 
 	"github.com/armon/go-socks5"
+)
+
+var (
+	ca  = flag.String("ca", "ca.crt", "")
+	crt = flag.String("crt", "cert.crt", "")
+	key = flag.String("key", "cert.key", "")
 )
 
 type request struct {
@@ -136,34 +143,32 @@ func handleProxyClient(localAddress string, proxyServerAddress string, certifica
 }
 
 func main() {
-	caFile := os.Getenv("CLOVER_CA")
-	keyFile := os.Getenv("CLOVER_KEY")
-	crtFile := os.Getenv("CLOVER_CRT")
+	flag.Parse()
 
-	cert, ca, err := loadCertificate(caFile, crtFile, keyFile)
+	cert, ca, err := loadCertificate(*ca, *crt, *key)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cannot load tokens: %s\n", err.Error())
 		os.Exit(1)
 	}
 
-	if len(os.Args) == 1 {
+	if len(flag.Args()) == 1 {
 		fmt.Printf("Usage:\n tunnel [server|client] [args]\n")
 		os.Exit(0)
 	}
 
-	switch os.Args[1] {
+	switch flag.Arg(0) {
 	case "server":
 		if len(os.Args) != 3 {
 			fmt.Printf("Usage:\n tunnel server [listen address]\n")
 			os.Exit(1)
 		}
-		err = handleProxyServer(os.Args[2], cert, ca)
+		err = handleProxyServer(flag.Arg(1), cert, ca)
 	case "client":
 		if len(os.Args) != 4 {
 			fmt.Printf("Usage:\n tunnel client [listen address] [remote address]\n")
 			os.Exit(1)
 		}
-		err = handleProxyClient(os.Args[2], os.Args[3], cert, ca)
+		err = handleProxyClient(flag.Arg(1), flag.Arg(2), cert, ca)
 	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Finished with error status: %s\n", err.Error())
