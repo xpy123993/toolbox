@@ -95,15 +95,17 @@ type proxyDialer struct {
 
 func (client *proxyDialer) Dial(context context.Context, network, address string) (net.Conn, error) {
 	conn, err := tls.Dial("tcp", client.remoteAddress, client.tlsConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	handshakeSuccess := false
 	defer func() {
 		if !handshakeSuccess {
 			conn.Close()
 		}
 	}()
-	if err != nil {
-		return nil, err
-	}
+
 	if err := gob.NewEncoder(conn).Encode(request{Method: network, Address: address}); err != nil {
 		return nil, err
 	}
